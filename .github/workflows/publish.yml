@@ -21,7 +21,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
+      SSH_HOST: ${{ secrets.HOSTINGER_HOST || vars.HOSTINGER_HOST }}
       SSH_PORT: ${{ vars.HOSTINGER_PORT || '65002' }}
       SSH_USER: ${{ vars.HOSTINGER_USER || 'u311568037' }}
       WEB_ROOT: ${{ vars.WEBSITE_ROOT || 'domains/digifoxprosolutions.com/public_html' }}
@@ -42,7 +42,15 @@ jobs:
           HOST=$(echo "$RAW" | tr -s ' \t' '\n\n' | grep -v '^-' | grep -vE '^(ssh|[0-9]{2,5})$' | grep -v '^$' | tail -1)
           HOST=${HOST##*@}
           if [[ "$HOST" =~ ^(.+):([0-9]{2,5})$ ]]; then HOST=${BASH_REMATCH[1]}; PORT=${PORT:-${BASH_REMATCH[2]}}; fi
+          if [ -z "$SSH_HOST" ]; then
+            echo "::error::HOSTINGER_HOST is empty or missing in THIS repository. Add it under Settings → Secrets and variables → Actions → Repository secrets (not Environment secrets), named exactly HOSTINGER_HOST."
+            exit 1
+          fi
           if [ -z "$HOST" ] || ! getent hosts "$HOST" >/dev/null; then
+            # Describe the value without showing it (this repository's logs are public).
+            kinds=""; [[ "$SSH_HOST" =~ [0-9] ]] && kinds="$kinds digits"; [[ "$SSH_HOST" =~ [a-zA-Z] ]] && kinds="$kinds letters"
+            [[ "$SSH_HOST" == *" "* ]] && kinds="$kinds spaces"; [[ "$SSH_HOST" == *"@"* ]] && kinds="$kinds @"; [[ "$SSH_HOST" == *":"* ]] && kinds="$kinds colon"
+            echo "The stored value has ${#SSH_HOST} characters with:$kinds"
             echo "::error::HOSTINGER_HOST is not a server address. Put only the SSH IP shown in hPanel → Advanced → SSH Access (for example 123.45.67.89), with nothing else."
             exit 1
           fi
