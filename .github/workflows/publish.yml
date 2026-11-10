@@ -46,10 +46,11 @@ jobs:
             echo "::error::HOSTINGER_HOST is empty or missing in THIS repository. Add it under Settings → Secrets and variables → Actions → Repository secrets (not Environment secrets), named exactly HOSTINGER_HOST."
             exit 1
           fi
-          if [ -z "$HOST" ] || ! getent hosts "$HOST" >/dev/null; then
+          # An IP address is fine as it is; a name must resolve.
+          if [ -z "$HOST" ] || { ! [[ "$HOST" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] && ! getent hosts "$HOST" >/dev/null; }; then
             # Describe the value without showing it (this repository's logs are public).
             kinds=""; [[ "$SSH_HOST" =~ [0-9] ]] && kinds="$kinds digits"; [[ "$SSH_HOST" =~ [a-zA-Z] ]] && kinds="$kinds letters"
-            [[ "$SSH_HOST" == *" "* ]] && kinds="$kinds spaces"; [[ "$SSH_HOST" == *"@"* ]] && kinds="$kinds @"; [[ "$SSH_HOST" == *":"* ]] && kinds="$kinds colon"
+            [[ "$SSH_HOST" == *" "* ]] && kinds="$kinds spaces"; [[ "$SSH_HOST" == *"@"* ]] && kinds="$kinds @"; [[ "$SSH_HOST" == *":"* ]] && kinds="$kinds colon"; [[ "$SSH_HOST" == *"."* ]] && kinds="$kinds dots"
             echo "The stored value has ${#SSH_HOST} characters with:$kinds"
             echo "::error::HOSTINGER_HOST is not a server address. Put only the SSH IP shown in hPanel → Advanced → SSH Access (for example 123.45.67.89), with nothing else."
             exit 1
