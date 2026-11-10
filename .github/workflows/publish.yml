@@ -36,9 +36,16 @@ jobs:
         run: |
           sudo apt-get -qq install -y sshpass >/dev/null
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          HOST=$(echo "$SSH_HOST" | tr -s ' ' '\n' | grep -v '^-' | grep -vE '^(ssh|[0-9]{2,5})$' | tail -1)
+          # Accept "1.2.3.4", "u311568037@1.2.3.4", "1.2.3.4:65002", "ssh://…", or the full "ssh -p 65002 u311568037@1.2.3.4".
+          RAW=$(printf '%s' "$SSH_HOST" | tr -d '\r' | sed 's#^[a-zA-Z]*://##; s#/.*$##')
+          PORT=$(echo "$RAW" | grep -oE -- '-p ?[0-9]+' | grep -oE '[0-9]+' || true)
+          HOST=$(echo "$RAW" | tr -s ' \t' '\n\n' | grep -v '^-' | grep -vE '^(ssh|[0-9]{2,5})$' | grep -v '^$' | tail -1)
           HOST=${HOST##*@}
-          PORT=$(echo "$SSH_HOST" | grep -oE -- '-p ?[0-9]+' | grep -oE '[0-9]+' || true)
+          if [[ "$HOST" =~ ^(.+):([0-9]{2,5})$ ]]; then HOST=${BASH_REMATCH[1]}; PORT=${PORT:-${BASH_REMATCH[2]}}; fi
+          if [ -z "$HOST" ] || ! getent hosts "$HOST" >/dev/null; then
+            echo "::error::HOSTINGER_HOST is not a server address. Put only the SSH IP shown in hPanel → Advanced → SSH Access (for example 123.45.67.89), with nothing else."
+            exit 1
+          fi
           echo "SSH_HOST=$HOST" >> "$GITHUB_ENV"
           [ -n "$PORT" ] && echo "SSH_PORT=$PORT" >> "$GITHUB_ENV" || true
           if [ -n "$KEY" ]; then
@@ -46,6 +53,15 @@ jobs:
             ssh-keygen -y -f ~/.ssh/id_deploy >/dev/null 2>&1 || mv ~/.ssh/id_deploy ~/.ssh/id_deploy.unusable
           fi
           printf 'Host *\n  StrictHostKeyChecking accept-new\n  ConnectTimeout 25\n' > ~/.ssh/config
+
+      - name: Test the SSH login
+        shell: bash
+        run: |
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -o BatchMode=yes -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
+          if ! $RUN "$SSH_USER@$SSH_HOST" "test -d \"$WEB_ROOT\" && echo LOGIN-OK"; then
+            echo "::error::Could not log in to Hostinger, or $WEB_ROOT was not found. Check HOSTINGER_HOST (only the IP), HOSTINGER_PASSWORD (the SSH password from hPanel → Advanced → SSH Access) and that SSH access is enabled."
+            exit 1
+          fi
 
       - name: Upload the pages (with backup)
         shell: bash
