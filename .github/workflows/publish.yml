@@ -4,8 +4,8 @@ name: Publish website (digifoxprosolutions.com)
 # public_html on Hostinger. Only the files in that folder are replaced; the
 # CRM (public_html/crm) and every other file are never touched.
 # Each replaced page is first copied to ~/website-backups/<date-time>/.
-# Safety: if a page on the server was edited by hand since live-base.sha256
-# was taken, the upload stops instead of overwriting that edit.
+# Safety: if a page on the server was edited by hand since the last publish
+# (recorded in ~/website-backups/published.sha256), the upload stops instead of overwriting that edit.
 #
 # Runs after a merge into main that changes public_html/, or by hand.
 # Needs repository secrets HOSTINGER_HOST and HOSTINGER_PASSWORD (or HOSTINGER_SSH_KEY).
@@ -80,10 +80,14 @@ jobs:
           cd public_html
           FILES=$(find . -type f | sed 's#^\./##' | sort)
           echo "Pages to publish:"; echo "$FILES"
-          # 1) The server's current pages must still be the versions we started from (or already the new ones).
+          # 1) The server's current pages must still be the versions last published (or already the new ones).
+          #    Each publish records what it uploaded in ~/website-backups/published.sha256 on the server;
+          #    live-base.sha256 in the repo is only used for a page that record does not list yet.
+          RECORD=$($RUN "$SSH_USER@$SSH_HOST" "cat website-backups/published.sha256 2>/dev/null" || true)
           for f in $FILES; do
             server=$($RUN "$SSH_USER@$SSH_HOST" "sha256sum \"$WEB_ROOT/$f\" 2>/dev/null | cut -d' ' -f1" || true)
-            base=$(grep "  $f\$" ../live-base.sha256 | cut -d' ' -f1)
+            base=$(grep "  $f\$" <<<"$RECORD" | cut -d' ' -f1 || true)
+            [ -n "$base" ] || base=$(grep "  $f\$" ../live-base.sha256 | cut -d' ' -f1 || true)
             new=$(sha256sum "$f" | cut -d' ' -f1)
             if [ -n "$server" ] && [ "$server" != "$base" ] && [ "$server" != "$new" ]; then
               echo "::error::$f was changed on the server since these files were prepared. Nothing was uploaded. Ask Claude to redo the change from the live page."
@@ -98,6 +102,11 @@ jobs:
             $RUN "$SSH_USER@$SSH_HOST" "chmod 644 \"$WEB_ROOT/$f.uploading\" && mv \"$WEB_ROOT/$f.uploading\" \"$WEB_ROOT/$f\""
             echo "Published $f (old copy in ~/website-backups/$STAMP/$f)"
           done
+          # 3) Record what is live now, so the next publish checks against it.
+          #    (keeps the lines for any page not in this publish, replaces the rest)
+          NEWREC=$( { awk -v list=" $(echo $FILES) " 'NF { n=$0; sub(/^[^ ]+  /, "", n); if (index(list, " " n " ") == 0) print }' <<<"$RECORD"; for f in $FILES; do sha256sum "$f"; done; } )
+          printf '%s\n' "$NEWREC" | $RUN "$SSH_USER@$SSH_HOST" "cat > website-backups/published.sha256.tmp && mv website-backups/published.sha256.tmp website-backups/published.sha256"
+          echo "Recorded the published fingerprints in ~/website-backups/published.sha256:"; echo "$NEWREC"
 
       - name: Check the live pages
         shell: bash

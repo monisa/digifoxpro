@@ -7,8 +7,9 @@ Source of **https://digifoxprosolutions.com/** (hosted on Hostinger).
 - When a change under `public_html/` is merged into `main`, the **Publish website** GitHub
   Action uploads those files (and only those) to Hostinger. It first backs up each old file to
   `~/website-backups/<date-time>/` on the server, and stops instead of overwriting a page that
-  was edited on the server in the meantime (`live-base.sha256` holds the fingerprints of the
-  live pages the files were made from). It then checks the live pages for the tracking tags.
+  was edited on the server in the meantime. After each upload it records the published pages'
+  fingerprints in `~/website-backups/published.sha256` on the server, which the next publish
+  checks against (`live-base.sha256` is only a fallback for pages not recorded there yet). It then checks the live pages for the tracking tags.
 - The CRM at crm.digifoxprosolutions.com lives in the separate `digi-crm` repository and is
   never touched by this one.
 
