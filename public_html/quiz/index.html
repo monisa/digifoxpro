@@ -235,7 +235,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                         <ul class="quiz-rules">
                             <li>The timer starts when you begin and the test submits itself when time runs out.</li>
                             <li>You can move between questions and change answers before submitting.</li>
-                            <li>Score <strong>12 or more</strong> to download your Digifox certificate instantly.</li>
+                            <li>Score <strong>12 or more</strong> and leave us a quick Google review to download your Digifox certificate.</li>
                             <li>Tip: on a computer, press <kbd>A</kbd>–<kbd>D</kbd> to answer and <kbd>←</kbd> <kbd>→</kbd> to move.</li>
                         </ul>
                     </div>
@@ -306,6 +306,21 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                 <h2 id="r-title" class="h3 fw-bold mt-4"></h2>
                 <p id="r-msg" class="mx-auto" style="max-width:560px;"></p>
                 <p id="r-mail" class="r-mail" role="status" aria-live="polite" hidden></p>
+                <div id="r-gate" class="r-gate mx-auto mt-4" role="region" aria-labelledby="r-gate-title" aria-live="polite" hidden>
+                    <div id="r-gate-ask">
+                        <p id="r-gate-title" class="fw-bold mb-1">⭐ One last step to get your certificate</p>
+                        <p class="mb-3">Please leave Digifox Pro Solutions a quick Google review. Your certificate unlocks as soon as you have done it.</p>
+                        <a id="r-gate-link" class="btn btn-primary text-uppercase" href="https://g.page/r/CY-wzdsLShK7EAE/review" target="_blank" rel="noopener">⭐ Write a Google review</a>
+                    </div>
+                    <div id="r-gate-wait" hidden>
+                        <p class="fw-bold mb-1">Thanks for your review! 🙏</p>
+                        <p class="mb-0">Your certificate is unlocking… come back to this tab when you have posted your review.</p>
+                    </div>
+                    <div id="r-gate-done" hidden>
+                        <p class="fw-bold mb-1">✅ Thank you for your review!</p>
+                        <p class="mb-0">Your certificate is unlocked. Tap <strong>Download certificate</strong> below.</p>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-center gap-2 flex-wrap mt-4">
                     <div id="r-cert"><button id="r-download" type="button" class="btn btn-primary text-uppercase">⬇ Download certificate</button></div>
                     <button id="r-retake" type="button" class="btn btn-secondary text-uppercase">Retake quiz</button>
@@ -418,6 +433,55 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
     <script defer src="../js/effects.js?v=202610161752"></script>
     <script defer src="../js/quiz-questions.js?v=202610161752"></script>
     <script defer src="../js/quiz.js?v=202610161752"></script>
+    <style>
+        .r-gate { max-width: 560px; padding: 1.25rem 1.5rem; border: 2px solid #f4b400; border-radius: 14px; background: #fff8e1; color: #212529; text-align: center; }
+        .r-gate.r-gate-done { border-color: #34a853; background: #e8f5e9; }
+        html:not(.r-reviewed) #r-download { opacity: .55; }
+    </style>
+    <script>
+    /* The certificate can only be downloaded after the visitor has opened the Google review page.
+       Runs before quiz.js's own download handler (capture phase) and holds the click until then. */
+    (function () {
+        var KEY = 'digifox-quiz-google-review';
+        var reviewed = false, opened = false;
+        try { reviewed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+        function $(id) { return document.getElementById(id); }
+        function show(step) {
+            ['ask', 'wait', 'done'].forEach(function (s) { $('r-gate-' + s).hidden = s !== step; });
+            $('r-gate').classList.toggle('r-gate-done', step === 'done');
+            $('r-gate').hidden = false;
+        }
+        function unlock() {
+            if (reviewed) return;
+            reviewed = true;
+            try { localStorage.setItem(KEY, '1'); } catch (e) {}
+            document.documentElement.classList.add('r-reviewed');
+            show('done');
+        }
+        function ready() {
+            if (reviewed) document.documentElement.classList.add('r-reviewed');
+            /* Listen on the document in the capture phase, so this runs first even if quiz.js re-creates the button. */
+            document.addEventListener('click', function (ev) {
+                if (reviewed || !ev.target.closest || !ev.target.closest('#r-download')) return;
+                ev.preventDefault();
+                ev.stopImmediatePropagation();
+                show(opened ? 'wait' : 'ask');
+                $('r-gate').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, true);
+            $('r-gate-link').addEventListener('click', function () {
+                opened = true;
+                show('wait');
+                if (typeof gtag === 'function') gtag('event', 'quiz_google_review_click');
+                /* Unlock when the visitor comes back from the review tab, or after 20 seconds. */
+                setTimeout(unlock, 20000);
+            });
+            document.addEventListener('visibilitychange', function () {
+                if (opened && document.visibilityState === 'visible') setTimeout(unlock, 1500);
+            });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
+    })();
+    </script>
 </body>
 
 </html>
