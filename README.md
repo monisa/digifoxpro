@@ -3,7 +3,7 @@
 Source of **https://digifoxprosolutions.com/** (hosted on Hostinger).
 
 - `public_html/` mirrors the website's `public_html` folder for the files kept here.
-  Pages kept so far: `index.html`, `our-services/index.html`, `quiz/index.html`.
+  Files kept so far: `index.html`, `our-services/index.html`, `quiz/index.html`, `js/quiz.js`.
 - When a change under `public_html/` is merged into `main`, the **Publish website** GitHub
   Action uploads those files (and only those) to Hostinger. It first backs up each old file to
   `~/website-backups/<date-time>/` on the server, and stops instead of overwriting a page that

@@ -235,7 +235,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                         <ul class="quiz-rules">
                             <li>The timer starts when you begin and the test submits itself when time runs out.</li>
                             <li>You can move between questions and change answers before submitting.</li>
-                            <li>Score <strong>12 or more</strong>, then leave us a quick Google review and upload a screenshot of it to download your Digifox certificate.</li>
+                            <li>Score <strong>12 or more</strong>, then leave us a quick Google review and upload a screenshot of it to get your Digifox certificate by email and download it.</li>
                             <li>Tip: on a computer, press <kbd>A</kbd>–<kbd>D</kbd> to answer and <kbd>←</kbd> <kbd>→</kbd> to move.</li>
                         </ul>
                     </div>
@@ -309,7 +309,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                 <div id="r-gate" class="r-gate mx-auto mt-4" role="region" aria-labelledby="r-gate-title" aria-live="polite" hidden>
                     <div id="r-gate-ask">
                         <p id="r-gate-title" class="fw-bold mb-1">⭐ One last step to get your certificate</p>
-                        <p class="mb-3">Leave Digifox Pro Solutions a quick Google review, then upload a screenshot of it to unlock your certificate.</p>
+                        <p class="mb-3">Leave Digifox Pro Solutions a quick Google review, then upload a screenshot of it to get your certificate by email and unlock the download.</p>
                         <p class="r-gate-step mb-2"><strong>Step 1:</strong> write your review</p>
                         <a id="r-gate-link" class="btn btn-primary text-uppercase mb-3" href="https://g.page/r/CY-wzdsLShK7EAE/review" target="_blank" rel="noopener">⭐ Write a Google review</a>
                         <p class="r-gate-step mb-2"><strong>Step 2:</strong> upload a screenshot of your posted review</p>
@@ -321,7 +321,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                     <div id="r-gate-done" hidden>
                         <img id="r-gate-preview" class="r-gate-preview mb-2" alt="Your review screenshot" hidden>
                         <p class="fw-bold mb-1">✅ Thank you for your review!</p>
-                        <p class="mb-0">Your certificate is unlocked. Tap <strong>Download certificate</strong> below.</p>
+                        <p class="mb-0">Your certificate is unlocked and on its way to your email. You can also tap <strong>Download certificate</strong> below.</p>
                     </div>
                 </div>
                 <div class="d-flex justify-content-center gap-2 flex-wrap mt-4">
@@ -435,7 +435,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script defer src="../js/effects.js?v=202610161752"></script>
     <script defer src="../js/quiz-questions.js?v=202610161752"></script>
-    <script defer src="../js/quiz.js?v=202610161752"></script>
+    <script defer src="../js/quiz.js?v=202611120900"></script>
     <style>
         .r-gate { max-width: 560px; padding: 1.25rem 1.5rem; border: 2px solid #f4b400; border-radius: 14px; background: #fff8e1; color: #212529; text-align: center; }
         .r-gate.r-gate-done { border-color: #34a853; background: #e8f5e9; }
@@ -481,6 +481,8 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                 try { localStorage.setItem(KEY, '1'); } catch (e) {}
                 document.documentElement.classList.add('r-reviewed');
                 show('done');
+                /* quiz.js emails the certificate when it hears this */
+                document.dispatchEvent(new CustomEvent('digifox:reviewed'));
                 if (typeof gtag === 'function') gtag('event', 'quiz_review_screenshot_added');
             });
         }
