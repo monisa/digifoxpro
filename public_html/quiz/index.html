@@ -265,7 +265,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                                 </div>
                             </div>
                             <p class="small text-muted mt-3 mb-4">Your name appears on the certificate exactly as typed.
-                                These details are not stored. They are used only to let Digifox Pro Solutions know you took the test and to email your certificate.</p>
+                                These details are not stored. They are used only to let Digifox Pro Solutions know you took the test, receive your review screenshot and email your certificate.</p>
                             <button type="submit" class="btn btn-primary text-uppercase">Start test</button>
                         </form>
                     </div>
@@ -315,8 +315,8 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
                         <p class="r-gate-step mb-2"><strong>Step 2:</strong> upload a screenshot of your posted review</p>
                         <label class="btn btn-outline-dark text-uppercase rounded-pill px-4 mb-0" for="r-gate-file">📷 Upload screenshot</label>
                         <input id="r-gate-file" class="visually-hidden" type="file" accept="image/*">
-                        <p id="r-gate-error" class="text-danger small mt-2 mb-0" hidden>Please choose an image file (a screenshot of your review).</p>
-                        <p class="small text-muted mt-2 mb-0">The screenshot stays on your device and is not uploaded to us.</p>
+                        <p id="r-gate-error" class="text-danger small mt-2 mb-0" hidden></p>
+                        <p class="small text-muted mt-2 mb-0">Your screenshot is sent to Digifox Pro Solutions with your name and contact details, only to confirm your review.</p>
                     </div>
                     <div id="r-gate-done" hidden>
                         <img id="r-gate-preview" class="r-gate-preview mb-2" alt="Your review screenshot" hidden>
@@ -435,7 +435,7 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script defer src="../js/effects.js?v=202610161752"></script>
     <script defer src="../js/quiz-questions.js?v=202610161752"></script>
-    <script defer src="../js/quiz.js?v=202611120900"></script>
+    <script defer src="../js/quiz.js?v=202611121400"></script>
     <style>
         .r-gate { max-width: 560px; padding: 1.25rem 1.5rem; border: 2px solid #f4b400; border-radius: 14px; background: #fff8e1; color: #212529; text-align: center; }
         .r-gate.r-gate-done { border-color: #34a853; background: #e8f5e9; }
@@ -443,52 +443,6 @@ src="https://www.facebook.com/tr?id=2137139433844948&ev=PageView&noscript=1"
         .r-gate-preview { display: block; max-width: 160px; max-height: 200px; margin: 0 auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
         html:not(.r-reviewed) #r-download { opacity: .55; }
     </style>
-    <script>
-    /* The certificate can only be downloaded after the visitor picks a screenshot of their Google review.
-       The image is only previewed in the browser; it is never sent anywhere.
-       Runs before quiz.js's own download handler (document, capture phase) and holds the click until then. */
-    (function () {
-        var KEY = 'digifox-quiz-google-review';
-        var reviewed = false;
-        try { reviewed = localStorage.getItem(KEY) === '1'; } catch (e) {}
-        function $(id) { return document.getElementById(id); }
-        function show(step) {
-            $('r-gate-ask').hidden = step !== 'ask';
-            $('r-gate-done').hidden = step !== 'done';
-            $('r-gate').classList.toggle('r-gate-done', step === 'done');
-            $('r-gate').hidden = false;
-        }
-        function ready() {
-            if (reviewed) document.documentElement.classList.add('r-reviewed');
-            document.addEventListener('click', function (ev) {
-                if (reviewed || !ev.target.closest || !ev.target.closest('#r-download')) return;
-                ev.preventDefault();
-                ev.stopImmediatePropagation();
-                show('ask');
-                $('r-gate').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, true);
-            $('r-gate-link').addEventListener('click', function () {
-                if (typeof gtag === 'function') gtag('event', 'quiz_google_review_click');
-            });
-            $('r-gate-file').addEventListener('change', function () {
-                var file = this.files && this.files[0];
-                var ok = !!file && /^image\//.test(file.type);
-                $('r-gate-error').hidden = ok || !file;
-                if (!ok) { this.value = ''; return; }
-                var img = $('r-gate-preview');
-                try { img.src = URL.createObjectURL(file); img.hidden = false; } catch (e) {}
-                reviewed = true;
-                try { localStorage.setItem(KEY, '1'); } catch (e) {}
-                document.documentElement.classList.add('r-reviewed');
-                show('done');
-                /* quiz.js emails the certificate when it hears this */
-                document.dispatchEvent(new CustomEvent('digifox:reviewed'));
-                if (typeof gtag === 'function') gtag('event', 'quiz_review_screenshot_added');
-            });
-        }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
-    })();
-    </script>
 </body>
 
 </html>
