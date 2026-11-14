@@ -21,5 +21,10 @@ Repository **Settings → Secrets and variables → Actions → New repository s
 Optional variables: `HOSTINGER_USER` (u311568037), `HOSTINGER_PORT` (65002),
 `WEBSITE_ROOT` (domains/digifoxprosolutions.com/public_html).
 
+## Cookie notice
+`public_html/js/cookie-consent.js` shows an Accept / Decline notice; Decline switches off GA4
+(consent mode denied), the Meta Pixel (consent revoked) and Clarity (not loaded). The policy is at
+`public_html/privacy-policy/index.html`; "Cookie settings" in every footer reopens the notice.
+
 ## Tracking (inside every page's `<head>`)
 Google Analytics `G-JCKWC42TF9` · Microsoft Clarity `w8uxl1npqn` · Meta Pixel `2137139433844948`
