@@ -3,7 +3,7 @@
 Source of **https://digifoxprosolutions.com/** (hosted on Hostinger).
 
 - `public_html/` mirrors the website's `public_html` folder for the files kept here.
-  Files kept so far: `index.html`, `our-services/index.html`, `quiz/index.html`, `js/quiz.js`.
+  Files kept so far: `index.html`, `our-services/index.html`, `quiz/index.html`, `quiz/send.php`, `js/quiz.js`.
 - When a change under `public_html/` is merged into `main`, the **Publish website** GitHub
   Action uploads those files (and only those) to Hostinger. It first backs up each old file to
   `~/website-backups/<date-time>/` on the server, and stops instead of overwriting a page that
@@ -17,6 +17,10 @@ Source of **https://digifoxprosolutions.com/** (hosted on Hostinger).
 Repository **Settings → Secrets and variables → Actions → New repository secret**:
 - `HOSTINGER_HOST`: the SSH IP from hPanel → Advanced → SSH Access
 - `HOSTINGER_PASSWORD`: the SSH password (or `HOSTINGER_SSH_KEY`: a private key)
+- `INFO_MAIL_PASSWORD`: the password of the info@digifoxprosolutions.com mailbox. The quiz
+  mailer (`quiz/send.php`) sends through Hostinger SMTP with it, so its emails are signed and
+  don't land in spam. Each publish writes it to `~/.digifox-smtp-password` on the server (outside
+  `public_html`); without it the quiz emails fall back to PHP `mail()`.
 
 Optional variables: `HOSTINGER_USER` (u311568037), `HOSTINGER_PORT` (65002),
 `WEBSITE_ROOT` (domains/digifoxprosolutions.com/public_html).

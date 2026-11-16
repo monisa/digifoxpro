@@ -108,6 +108,20 @@ jobs:
           printf '%s\n' "$NEWREC" | $RUN "$SSH_USER@$SSH_HOST" "cat > website-backups/published.sha256.tmp && mv website-backups/published.sha256.tmp website-backups/published.sha256"
           echo "Recorded the published fingerprints in ~/website-backups/published.sha256:"; echo "$NEWREC"
 
+      # quiz/send.php sends its emails through Hostinger SMTP as info@digifoxprosolutions.com.
+      # The mailbox password comes from the repository secret INFO_MAIL_PASSWORD and is written to
+      # ~/.digifox-smtp-password on the server (outside public_html, readable only by the account).
+      # Without the secret this step does nothing and send.php falls back to PHP mail().
+      - name: Save the quiz mail password on the server
+        shell: bash
+        env:
+          MAIL_PASSWORD: ${{ secrets.INFO_MAIL_PASSWORD }}
+        run: |
+          if [ -z "$MAIL_PASSWORD" ]; then echo "INFO_MAIL_PASSWORD is not set; the quiz emails keep using PHP mail()."; exit 0; fi
+          if [ -f ~/.ssh/id_deploy ]; then RUN="ssh -i $HOME/.ssh/id_deploy -p $SSH_PORT"; else RUN="sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $SSH_PORT"; fi
+          printf '%s' "$MAIL_PASSWORD" | $RUN "$SSH_USER@$SSH_HOST" "umask 077 && cat > .digifox-smtp-password.tmp && mv .digifox-smtp-password.tmp .digifox-smtp-password && chmod 600 .digifox-smtp-password"
+          echo "Saved the quiz mail password in ~/.digifox-smtp-password."
+
       - name: Check the live pages
         shell: bash
         run: |

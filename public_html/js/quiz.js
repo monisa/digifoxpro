@@ -10,7 +10,7 @@
        • a notice to Digifox when someone starts the test
        • the PDF certificate to the participant when they score 12+,
          once they have added their Google review screenshot
-         (the review step is in quiz/index.html)
+       • that screenshot to Digifox, with the participant's details
      ------------------------------------------------------------------ */
   var MAILER_URL = "send.php";
   var NUM_QUESTIONS = 15;
@@ -173,6 +173,7 @@
       ? "You scored " + score + " out of " + n + " and earned your Digifox certificate."
       : "You scored " + score + " out of " + n + ". You need " + PASS_MARK + " or more for a certificate. Try again with a fresh set of questions, or join our free Sunday demo class to learn more.";
     $("r-cert").hidden = !passed;
+    $("r-gate").hidden = true;   // shown again by emailWhenReviewed() on a pass
 
     // answer review
     var list = $("r-review"); list.innerHTML = "";
@@ -209,19 +210,71 @@
     el.className = "r-mail " + cls; el.innerHTML = html; el.hidden = false;
   }
 
-  /* The certificate is emailed only after the Google review step: the page adds the
-     "r-reviewed" class to <html> and fires "digifox:reviewed" once a screenshot is added. */
-  function hasReviewed() { return document.documentElement.classList.contains("r-reviewed"); }
-
-  function emailWhenReviewed() {
-    if (hasReviewed()) { emailCertificate(); return; }
-    state.mailPending = true;
-    setMailStatus("sending", "📧 Add your Google review screenshot below and we'll email your certificate to <strong>" + esc(state.user.email) + "</strong>.");
-    var gate = $("r-gate"); if (gate) gate.hidden = false;
+  /* ---------- Google review step ----------
+     After passing, the visitor writes a Google review and adds a screenshot of it.
+     Only then is the certificate emailed and the download unlocked, and the screenshot
+     is sent to Digifox. Needed again for every passing attempt. */
+  function gateStep(step) {
+    $("r-gate-ask").hidden = step !== "ask";
+    $("r-gate-done").hidden = step !== "done";
+    $("r-gate").classList.toggle("r-gate-done", step === "done");
+    $("r-gate").hidden = false;
   }
 
-  document.addEventListener("digifox:reviewed", function () {
-    if (state && state.mailPending) { state.mailPending = false; emailCertificate(); }
+  function emailWhenReviewed() {
+    state.reviewed = false;
+    document.documentElement.classList.remove("r-reviewed");
+    $("r-gate-file").value = "";
+    $("r-gate-error").hidden = true;
+    $("r-gate-preview").hidden = true;
+    gateStep("ask");
+    setMailStatus("sending", "📧 Add your Google review screenshot below and we'll email your certificate to <strong>" + esc(state.user.email) + "</strong>.");
+  }
+
+  function gateError(msg) { var e = $("r-gate-error"); e.textContent = msg; e.hidden = false; }
+
+  // Shrink the screenshot to a JPEG of at most ~1 MB (send.php accepts up to 1.5 MB).
+  function screenshotToJpegBase64(file, done) {
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      var scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      var x = c.getContext("2d");
+      x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(img, 0, 0, c.width, c.height);
+      var b64 = "";
+      for (var q = 0.85; q >= 0.4; q -= 0.15) {
+        b64 = c.toDataURL("image/jpeg", q).split(",")[1] || "";
+        if (b64.length * 0.75 <= 1000000) break;
+      }
+      done(url, b64);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); done(null, ""); };
+    img.src = url;
+  }
+
+  $("r-gate-link").addEventListener("click", function () {
+    if (typeof gtag === "function") gtag("event", "quiz_google_review_click");
+  });
+
+  $("r-gate-file").addEventListener("change", function () {
+    var input = this, file = input.files && input.files[0];
+    if (!file || !state || !state.done || state.reviewed) return;
+    $("r-gate-error").hidden = true;
+    if (!/^image\//.test(file.type)) { input.value = ""; gateError("Please choose an image file (a screenshot of your review)."); return; }
+    screenshotToJpegBase64(file, function (url, b64) {
+      if (!url || !b64) { input.value = ""; gateError("We couldn't open that image. Please take a normal screenshot (PNG or JPG) and try again."); return; }
+      var img = $("r-gate-preview"); img.src = url; img.hidden = false;
+      state.reviewed = true;
+      document.documentElement.classList.add("r-reviewed");
+      gateStep("done");
+      if (typeof gtag === "function") gtag("event", "quiz_review_screenshot_added");
+      var u = state.user;
+      post({ type: "review", name: u.name, email: u.email, phone: u.phone, location: u.location, score: state.score, image: b64 });
+      emailCertificate();
+    });
   });
 
   /* email the certificate (as a PDF) to the participant */
@@ -280,7 +333,14 @@
   });
 
   /* ---------- Certificate (drawn in the browser) ---------- */
-  $("r-download").addEventListener("click", function () { makeCertificate(true, downloadPng); });
+  $("r-download").addEventListener("click", function () {
+    if (!state || !state.reviewed) {   // locked until the review screenshot is added
+      gateStep("ask");
+      $("r-gate").scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    makeCertificate(true, downloadPng);
+  });
 
   function downloadPng(c) {
     var a = document.createElement("a");
