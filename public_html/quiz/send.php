@@ -102,7 +102,9 @@ function send_mail($to, $replyTo, $subject, $extraHeaders, $body) {
     $subject = enc($subject);
     $password = smtp_password();
     if ($password !== null) return smtp_send($to, $replyTo, $subject, $extraHeaders, $body, $password);
-    // Fallback until the SMTP password file exists on the server.
+    // Fallback until the SMTP password file exists on the server. Unsigned mail() is what lands in spam,
+    // so leave a trace in the error log whenever this path is taken.
+    error_log('digifox quiz: SMTP password file not found, sending with mail() (likely to be marked as spam)');
     $headers = 'From: ' . enc(FROM_NAME) . ' <' . FROM_EMAIL . ">\r\nReply-To: $replyTo\r\n" . $extraHeaders;
     return mail($to, $subject, $body, $headers, '-f' . FROM_EMAIL);
 }
@@ -180,32 +182,22 @@ if ($type === 'certificate') {
     $text = <<<TXT
 Hello {$name},
 
-Congratulations on completing the Digifox Quiz! 🎉
+Congratulations on completing the Digifox Quiz. Your certificate of completion is attached to this email as a PDF.
 
-Thank you for participating in the Digifox Quiz by Digifox Pro Solutions. Your certificate of completion is a recognition of your effort and interest in learning digital skills.
+Thank you for taking part. As a quiz participant you are welcome to attend our demo classes at no charge.
 
-🚀 Take the Next Step in Your Digital Journey!
+Demo class details
+- Day: every Sunday
+- Time: 5:00 PM to 6:00 PM
+- Fee: none
 
-Based on your quiz performance, you are eligible to attend our FREE DEMO CLASSES!
+The classes cover digital marketing basics and practical ways to build digital skills for a career, freelancing or a business. If you would like to join, you can find more details on our website: https://digifoxprosolutions.com/
 
-Join us every Sunday to explore digital marketing, discover practical strategies, and learn how you can build your skills for career growth, freelancing, or business success.
-
-🎓 Free Demo Class Details
-
-* Day: Every Sunday
-* Time: 5:00 PM – 6:00 PM
-* Fee: Absolutely FREE!
-
-Ready to upgrade your digital skills? Enroll today and take the first step towards your digital future!
-
-👉 Visit our website: https://digifoxprosolutions.com/
-
-We look forward to welcoming you to our demo classes and helping you unlock your potential.
+If you have any questions, just reply to this email.
 
 Best regards,
 Team Digifox Pro Solutions
-Complete Solution for Digital Era
-🌐 https://digifoxprosolutions.com/
+https://digifoxprosolutions.com/
 TXT;
     $text = str_replace(["\r\n", "\n"], ["\n", "\r\n"], $text);
 
