@@ -8,7 +8,7 @@
 // The mailbox password is NOT in this file or in the repository. It is read from
 // SMTP_PASSWORD_FILE in the hosting account's home folder (outside public_html), which the
 // "Publish website" GitHub Action writes from the repository secret INFO_MAIL_PASSWORD.
-// If that file is missing, the emails fall back to mail() as before.
+// If that file is missing, or the SMTP send fails, the emails fall back to mail() so none are lost.
 
 const ADMIN_EMAIL   = 'info@digifoxprosolutions.com';   // gets the "started" and "review screenshot" notices
 const FROM_EMAIL    = 'info@digifoxprosolutions.com';   // must be a real mailbox on this hosting account
@@ -101,10 +101,13 @@ function smtp_send($to, $replyTo, $subject, $extraHeaders, $body, $password) {
 function send_mail($to, $replyTo, $subject, $extraHeaders, $body) {
     $subject = enc($subject);
     $password = smtp_password();
-    if ($password !== null) return smtp_send($to, $replyTo, $subject, $extraHeaders, $body, $password);
-    // Fallback until the SMTP password file exists on the server. Unsigned mail() is what lands in spam,
-    // so leave a trace in the error log whenever this path is taken.
-    error_log('digifox quiz: SMTP password file not found, sending with mail() (likely to be marked as spam)');
+    if ($password !== null) {
+        if (smtp_send($to, $replyTo, $subject, $extraHeaders, $body, $password)) return true;
+        // SMTP failed (details are in the error log above). Do not lose the email: try mail() instead.
+        error_log('digifox quiz: SMTP send failed, falling back to mail() (may be marked as spam)');
+    } else {
+        error_log('digifox quiz: SMTP password file not found, sending with mail() (likely to be marked as spam)');
+    }
     $headers = 'From: ' . enc(FROM_NAME) . ' <' . FROM_EMAIL . ">\r\nReply-To: $replyTo\r\n" . $extraHeaders;
     return mail($to, $subject, $body, $headers, '-f' . FROM_EMAIL);
 }
